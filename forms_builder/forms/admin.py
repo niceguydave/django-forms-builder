@@ -9,7 +9,7 @@ from io import BytesIO, StringIO
 
 from django.conf.urls import patterns, url
 from django.contrib import admin
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import default_storage, FileSystemStorage
 from django.core.urlresolvers import reverse
 from django.db.models import Count
 from django.http import HttpResponse, HttpResponseRedirect
@@ -191,9 +191,14 @@ class FormAdmin(admin.ModelAdmin):
         """
         model = self.fieldentry_model
         field_entry = get_object_or_404(model, id=field_entry_id)
-        path = join(fs.location, field_entry.value)
-        response = HttpResponse(mimetype=guess_type(path)[0])
-        f = open(path, "r+b")
+        if UPLOAD_ROOT:
+            path = join(fs.location, field_entry.value)
+            response = HttpResponse(content_type=guess_type(path)[0])
+            f = open(path, "r+b")
+        else:
+            fs = default_storage
+            response = HttpResponse(mimetype=guess_type(field_entry.value)[0])
+            f = fs.open(field_entry.value)
         response["Content-Disposition"] = "attachment; filename=%s" % f.name
         response.write(f.read())
         f.close()
